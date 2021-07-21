@@ -1,0 +1,60 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+PROXY_IP            = "192.168.33.10"
+K0S_CONTROLLER_IP   = "192.168.33.20"
+
+Vagrant.configure("2") do |config|
+
+  config.vm.define "proxy" do |node|
+    node.vm.box = "ubuntu/bionic64"
+    node.vm.hostname = "proxy"
+    node.vm.network :private_network, ip: PROXY_IP
+    node.vm.provider :virtualbox do |vb|
+      vb.memory = 256
+      vb.cpus = 1
+    end
+    node.vm.provision "file", source: "./nginx.conf", destination: "/home/vagrant/nginx.conf"
+    node.vm.provision "shell", inline: <<-SHELL
+      # build custom nginx
+      sudo apt-get -y update
+      sudo apt-get -y install git make build-essential libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev libgd-dev libxml2 libxml2-dev uuid-dev
+      git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
+      wget http://nginx.org/download/nginx-1.9.2.tar.gz
+      tar -xzvf nginx-1.9.2.tar.gz
+      cd nginx-1.9.2/
+      sudo patch -p1 < /home/vagrant/ngx_http_proxy_connect_module/patch/proxy_connect.patch
+      sudo ./configure --add-module=/home/vagrant/ngx_http_proxy_connect_module
+      sudo make CFLAGS="-Wimplicit-fallthrough"
+      sudo make install
+
+      # configure nginx
+      sudo mkdir -p /usr/local/nginx/conf
+      sudo mv /home/vagrant/nginx.conf /usr/local/nginx/conf/nginx.conf
+      sudo mkdir -p /var/log/nginx
+
+      # run nginx
+      sudo /usr/local/nginx/sbin/nginx -t
+      sudo /usr/local/nginx/sbin/nginx
+      SHELL
+  end
+
+  config.vm.define "k0scontroller" do |node|
+    node.vm.box = "ubuntu/bionic64"
+    node.vm.hostname = "k0scontroller"
+    node.vm.network :private_network, ip: K0S_CONTROLLER_IP
+    node.vm.provider :virtualbox do |vb|
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+    node.vm.provision "file", source: "./k0s", destination: "/home/vagrant/k0s"
+    node.vm.provision "file", source: "./k0scontroller.conf", destination: "/home/vagrant/k0scontroller.conf"
+    node.vm.provision "shell", inline: <<-SHELL
+      sudo mv /home/vagrant/k0s /usr/local/bin/k0s
+      sudo mkdir -p /etc/systemd/system/k0scontroller.service.d
+      sudo mv /home/vagrant/k0scontroller.conf /etc/systemd/system/k0scontroller.service.d/k0scontroller.conf
+      sudo k0s install controller --single
+    SHELL
+  end
+
+end
