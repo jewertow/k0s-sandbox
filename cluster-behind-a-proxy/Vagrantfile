@@ -1,19 +1,22 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-PROXY_IP            = "192.168.33.10"
-K0S_CONTROLLER_IP   = "192.168.33.20"
+PROXY_IP       = "192.168.33.10"
+K0S_SYSTEMD_IP = "192.168.33.20"
+K0S_OPENRC     = "192.168.33.30"
 
 Vagrant.configure("2") do |config|
 
   config.vm.define "proxy" do |node|
-    node.vm.box = "ubuntu/bionic64"
-    node.vm.hostname = "proxy"
-    node.vm.network :private_network, ip: PROXY_IP
     node.vm.provider :virtualbox do |vb|
       vb.memory = 256
       vb.cpus = 1
     end
+
+    node.vm.box = "ubuntu/bionic64"
+    node.vm.hostname = "proxy"
+    node.vm.network :private_network, ip: PROXY_IP
+
     node.vm.provision "file", source: "./nginx.conf", destination: "/home/vagrant/nginx.conf"
     node.vm.provision "shell", inline: <<-SHELL
       # build custom nginx
@@ -39,22 +42,53 @@ Vagrant.configure("2") do |config|
       SHELL
   end
 
-  config.vm.define "k0scontroller" do |node|
+  config.vm.provider :virtualbox do |vb|
+    vb.memory = 2048
+    vb.cpus = 2
+  end
+
+  config.vm.define "k0s-systemd" do |node|
     node.vm.box = "ubuntu/bionic64"
-    node.vm.hostname = "k0scontroller"
-    node.vm.network :private_network, ip: K0S_CONTROLLER_IP
-    node.vm.provider :virtualbox do |vb|
-      vb.memory = 2048
-      vb.cpus = 2
-    end
-    node.vm.provision "file", source: "./k0s", destination: "/home/vagrant/k0s"
-    node.vm.provision "file", source: "./k0scontroller.conf", destination: "/home/vagrant/k0scontroller.conf"
-    node.vm.provision "shell", inline: <<-SHELL
-      sudo mv /home/vagrant/k0s /usr/local/bin/k0s
+    node.vm.hostname = "k0s-systemd"
+    node.vm.network :private_network, ip: K0S_SYSTEMD_IP
+    
+    node.vm.provision :file, source: "./k0s", destination: "/home/vagrant/k0s"
+    node.vm.provision :file, source: "./k0scontroller.conf", destination: "/home/vagrant/k0scontroller.conf"
+    
+    node.vm.provision :shell, inline: <<-SHELL
+      # configure env variables
       sudo mkdir -p /etc/systemd/system/k0scontroller.service.d
       sudo mv /home/vagrant/k0scontroller.conf /etc/systemd/system/k0scontroller.service.d/k0scontroller.conf
+      
+      # install k0s
+      sudo mv /home/vagrant/k0s /usr/local/bin/k0s
       sudo k0s install controller --single
     SHELL
+    node.vm.provision :shell, reboot: true
+  end
+
+  config.vm.define "k0s-openrc" do |node|
+    node.vm.box = "generic/alpine313"
+    node.vm.hostname = "k0s-openrc"
+    node.vm.network :private_network, ip: K0S_OPENRC
+    
+    node.vm.provision :file, source: "./k0s", destination: "/home/vagrant/k0s"
+
+    node.vm.provision :shell, inline: <<-SHELL
+      # configure cgroups
+      rc-update add cgroups boot
+
+      # remove -docker keyword so we actually mount cgroups in container
+      sed -i -e '/keyword/s/-docker//' /etc/init.d/cgroups
+
+      # install k0s
+      mv /home/vagrant/k0s /usr/local/bin/k0s
+      k0s install controller --single
+
+      # configure http proxy
+      sed -i '2 i export HTTP_PROXY="192.168.33.10:3128"' /etc/init.d/k0scontroller
+    SHELL
+    node.vm.provision :shell, reboot: true
   end
 
 end
