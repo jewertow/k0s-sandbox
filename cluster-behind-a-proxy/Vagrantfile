@@ -86,7 +86,7 @@ Vagrant.configure("2") do |config|
       k0s install controller --single
 
       # configure http proxy
-      sed -i '2 i export HTTP_PROXY="192.168.33.10:3128"' /etc/init.d/k0scontroller
+      echo 'export HTTP_PROXY="192.168.33.10:3128"' > /etc/conf.d/k0scontroller
     SHELL
     node.vm.provision :shell, reboot: true
   end

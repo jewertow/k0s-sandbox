@@ -5,6 +5,7 @@ This demo shows how to configure HTTP forward proxy for k0s controller on linux 
 To enable using forward proxy, it's necessary to make `HTTP_PROXY` environment variable visible for containerd process.
 
 * SystemD - create drop-in directory and add config file with env variable:
+
 ```bash
 sudo mkdir -p /etc/systemd/system/k0scontroller.service.d
 sudo tee -a /etc/systemd/system/k0scontroller.service.d/http-proxy.conf <<EOT
@@ -13,22 +14,10 @@ Environment=HTTP_PROXY=192.168.33.10:3128
 EOT
 ```
 
-* OpenRC - export env variable in a service file:
-```
-#!/sbin/openrc-run
-export HTTP_PROXY="192.168.33.10:3128"
-supervisor=supervise-daemon
-name="k0s controller"
-description="k0s - Zero Friction Kubernetes"
-command=/usr/local/bin/k0s
-command_args="controller --single=true "
-name=$(basename $(readlink -f $command))
-supervise_daemon_args="--stdout /var/log/${name}.log --stderr /var/log/${name}.err"
-depend() {
-	need net
-	use dns
-	after firewall
-}
+* OpenRC - export environment variable overriding service configuration in /etc/conf.d directory:
+
+```bash
+echo 'export HTTP_PROXY="192.168.33.10:3128"' > /etc/conf.d/k0scontroller
 ```
 
 ## Getting started
