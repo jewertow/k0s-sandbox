@@ -1,0 +1,18 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/xenial64"
+  config.disksize.size = '20GB'
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "8192"
+  end
+
+  # TODO: set path to k0s source dir
+  config.vm.synced_folder ".", "/home/vagrant/k0s"
+
+  config.vm.provision "install-basic-deps", type: "shell", path: "./install-basic-deps.sh"
+  config.vm.provision "install-docker", type: "shell", path: "./install-docker.sh"
+  config.vm.provision "install-go", type: "shell", path: "./install-go.sh"
+end
