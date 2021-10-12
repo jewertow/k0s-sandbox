@@ -1,6 +1,8 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+K0S_LOCAL_DIR = ""
+
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/xenial64"
   config.disksize.size = '20GB'
@@ -10,9 +12,10 @@ Vagrant.configure("2") do |config|
   end
 
   # TODO: set path to k0s source dir
-  config.vm.synced_folder ".", "/home/vagrant/k0s"
+  config.vm.synced_folder K0S_LOCAL_DIR, "/home/vagrant/k0s"
 
   config.vm.provision "install-basic-deps", type: "shell", path: "./install-basic-deps.sh"
   config.vm.provision "install-docker", type: "shell", path: "./install-docker.sh"
+  config.vm.provision "install-footloose", type: "shell", path: "./install-footloose.sh"
   config.vm.provision "install-go", type: "shell", path: "./install-go.sh"
 end
