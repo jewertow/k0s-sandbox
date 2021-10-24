@@ -1,3 +1,12 @@
 **/*/.vagrant
 **/*/k0s
 **/*/*.log
+
+# TLS related files
+external-etcd-cluster/tls/certs
+external-etcd-cluster/tls/crl
+external-etcd-cluster/tls/newcerts
+external-etcd-cluster/tls/private
+external-etcd-cluster/**/*.csr
+external-etcd-cluster/**/index.txt*
+external-etcd-cluster/**/serial*

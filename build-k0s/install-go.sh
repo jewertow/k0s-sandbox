@@ -20,3 +20,4 @@ echo 'export PATH=$GOPATH/bin:$GOROOT/bin:$PATH' >> /home/vagrant/.bashrc
 go version
 
 go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.2-0.20210715152647-b2ab2ddd5fd5
+ln -s $GOPATH/bin/controller-gen /usr/local/bin/controller-gen

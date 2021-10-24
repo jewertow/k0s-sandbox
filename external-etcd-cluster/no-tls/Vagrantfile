@@ -17,7 +17,7 @@ Vagrant.configure("2") do |config|
     node.vm.hostname = "etcd"
     node.vm.network :private_network, ip: ETCD_IP
 
-    node.vm.provision "install_etcd", type: "shell", path: "./install-etcd.sh"
+    node.vm.provision "install_etcd", type: "shell", path: "../install-etcd.sh"
     node.vm.provision "configure_etcd", type: "shell", env: { "NODE_IP" => ETCD_IP }, inline: <<-SHELL
       sudo mkdir /etc/systemd/system/etcd.service.d
       tee -a /etc/systemd/system/etcd.service.d/single-node-cluster.conf <<EOT
@@ -42,7 +42,7 @@ EOT
     node.vm.hostname = "k0s-systemd"
     node.vm.network :private_network, ip: K0S_SYSTEMD_IP
 
-    node.vm.provision :file, source: "./k0s", destination: "/home/vagrant/k0s"
+    node.vm.provision :file, source: "../k0s", destination: "/home/vagrant/k0s"
     node.vm.provision :file, source: "./k0s-systemd.yaml", destination: "/home/vagrant/k0s.yaml"
 
     node.vm.provision :shell, inline: <<-SHELL
@@ -57,8 +57,8 @@ EOT
     node.vm.hostname = "k0s-openrc"
     node.vm.network :private_network, ip: K0S_OPENRC_IP
 
-    node.vm.provision "configure-cgroups", type: "shell", path: "../common/openrc/configure-cgroups.sh"
-    node.vm.provision :file, source: "./k0s", destination: "/home/vagrant/k0s"
+    node.vm.provision "configure-cgroups", type: "shell", path: "../../common/openrc/configure-cgroups.sh"
+    node.vm.provision :file, source: "../k0s", destination: "/home/vagrant/k0s"
     node.vm.provision :file, source: "./k0s-openrc.yaml", destination: "/home/vagrant/k0s.yaml"
     node.vm.provision :shell, inline: <<-SHELL
       sudo mv /home/vagrant/k0s /usr/local/bin/k0s
