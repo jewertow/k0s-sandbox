@@ -1,6 +1,8 @@
 # k0s with external etcd cluster and enabled TLS
 
 ```bash
+./generate-certificates.sh
+
 vagrant up
 vagrant ssh etcd
 
