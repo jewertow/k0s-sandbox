@@ -73,8 +73,8 @@ spec:
     etcd:
       externalCluster:
         endpoints:
-        - http://192.168.1.10:2379
-        etcdPrefix: k0s-openrc-tenant
+        - http://192.168.10.10:2379
+        etcdPrefix: k0s-tenant-1
     type: etcd
   telemetry:
     enabled: true

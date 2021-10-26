@@ -73,8 +73,11 @@ spec:
     etcd:
       externalCluster:
         endpoints:
-        - http://192.168.1.10:2379
-        etcdPrefix: k0s-systemd-tenant
+        - https://192.168.10.10:2379
+        etcdPrefix: k0s-tenant-2
+        caFile: /etc/pki/CA/ca.crt
+        clientCertFile: /etc/pki/tls/certs/k0s.crt
+        clientKeyFile: /etc/pki/tls/private/k0s.key
     type: etcd
   telemetry:
     enabled: true

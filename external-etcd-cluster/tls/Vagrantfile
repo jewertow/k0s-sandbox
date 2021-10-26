@@ -1,8 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-ETCD_IP         = "192.168.10.10"
-K0S_TENANT_1_IP = "192.168.10.11"
+ETCD_IP = "192.168.10.10"
 
 Vagrant.configure("2") do |config|
 
@@ -50,30 +49,32 @@ EOT
     vb.cpus = 1
   end
 
-  config.vm.define "k0s-tenant-1" do |node|
-    node.vm.box = "ubuntu/bionic64"
-    node.vm.hostname = "k0s.k0s.sandbox"
-    node.vm.network :private_network, ip: K0S_TENANT_1_IP
+  (1..2).each do |i|
+    config.vm.define "k0s-tenant-#{i}" do |node|
+      node.vm.box = "ubuntu/bionic64"
+      node.vm.hostname = "k0s-#{i}.k0s.sandbox"
+      node.vm.network :private_network, ip: "192.168.10.#{10+i}"
 
-    node.vm.provision :file, source: "./certs/ca.crt", destination: "/home/vagrant/ca.crt"
-    node.vm.provision :file, source: "./certs/k0s.crt", destination: "/home/vagrant/k0s.crt"
-    node.vm.provision :file, source: "./private/k0s.key", destination: "/home/vagrant/k0s.key"
+      node.vm.provision :file, source: "./certs/ca.crt", destination: "/home/vagrant/ca.crt"
+      node.vm.provision :file, source: "./certs/k0s-#{i}.crt", destination: "/home/vagrant/k0s.crt"
+      node.vm.provision :file, source: "./private/k0s-#{i}.key", destination: "/home/vagrant/k0s.key"
 
-    node.vm.provision :file, source: "../k0s", destination: "/home/vagrant/k0s"
-    node.vm.provision :file, source: "./k0s-tenant-1.yaml", destination: "/home/vagrant/k0s.yaml"
+      node.vm.provision :file, source: "../k0s", destination: "/home/vagrant/k0s"
+      node.vm.provision :file, source: "./k0s-tenant-#{i}.yaml", destination: "/home/vagrant/k0s.yaml"
 
-    node.vm.provision :shell, inline: <<-SHELL
-      # setup TLS keys and certs
-      sudo mkdir -p /etc/pki/CA /etc/pki/tls/certs /etc/pki/tls/private
-      sudo mv /home/vagrant/ca.crt /etc/pki/CA/ca.crt
-      sudo mv /home/vagrant/k0s.crt /etc/pki/tls/certs/k0s.crt
-      sudo mv /home/vagrant/k0s.key /etc/pki/tls/private/k0s.key
+      node.vm.provision :shell, inline: <<-SHELL
+        # setup TLS keys and certs
+        sudo mkdir -p /etc/pki/CA /etc/pki/tls/certs /etc/pki/tls/private
+        sudo mv /home/vagrant/ca.crt /etc/pki/CA/ca.crt
+        sudo mv /home/vagrant/k0s.crt /etc/pki/tls/certs/k0s.crt
+        sudo mv /home/vagrant/k0s.key /etc/pki/tls/private/k0s.key
 
-      # configure k0s as a service
-      sudo mv /home/vagrant/k0s /usr/local/bin/k0s
-      sudo k0s install controller --single -c /home/vagrant/k0s.yaml
-      sudo k0s start
-    SHELL
+        # configure k0s as a service
+        sudo mv /home/vagrant/k0s /usr/local/bin/k0s
+        sudo k0s install controller --single -c /home/vagrant/k0s.yaml
+        sudo k0s start
+      SHELL
+    end
   end
 
 end
