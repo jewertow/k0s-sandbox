@@ -13,8 +13,8 @@ Vagrant.configure("2") do |config|
 
   config.vm.synced_folder K0S_DIR, "/home/vagrant/k0s"
 
-  config.vm.provision "install-basic-deps", type: "shell", path: "./install-basic-deps.sh"
-  config.vm.provision "install-docker", type: "shell", path: "./install-docker.sh"
-  config.vm.provision "install-footloose", type: "shell", path: "./install-footloose.sh"
-  config.vm.provision "install-go", type: "shell", path: "./install-go.sh"
+  config.vm.provision "install-basic-deps", type: "shell", path: "install-basic-deps.sh"
+  config.vm.provision "install-docker",     type: "shell", path: "../common/ubuntu-bionic64/install-docker.sh"
+  config.vm.provision "install-footloose",  type: "shell", path: "install-footloose.sh"
+  config.vm.provision "install-go",         type: "shell", path: "install-go.sh"
 end

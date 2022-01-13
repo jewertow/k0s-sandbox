@@ -1,15 +1,15 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-PROXY_IP       = "192.168.33.10"
-K0S_SYSTEMD_IP = "192.168.33.20"
-K0S_OPENRC     = "192.168.33.30"
+PROXY_IP       = "192.168.56.10"
+K0S_SYSTEMD_IP = "192.168.56.20"
+K0S_OPENRC_IP  = "192.168.56.30"
 
 Vagrant.configure("2") do |config|
 
   config.vm.define "proxy" do |node|
     node.vm.provider :virtualbox do |vb|
-      vb.memory = 256
+      vb.memory = 1024
       vb.cpus = 1
     end
 
@@ -17,29 +17,15 @@ Vagrant.configure("2") do |config|
     node.vm.hostname = "proxy"
     node.vm.network :private_network, ip: PROXY_IP
 
-    node.vm.provision "file", source: "./nginx.conf", destination: "/home/vagrant/nginx.conf"
-    node.vm.provision "shell", inline: <<-SHELL
-      # build custom nginx
-      sudo apt-get -y update
-      sudo apt-get -y install git make build-essential libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev libgd-dev libxml2 libxml2-dev uuid-dev
-      git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
-      wget http://nginx.org/download/nginx-1.9.2.tar.gz
-      tar -xzvf nginx-1.9.2.tar.gz
-      cd nginx-1.9.2/
-      sudo patch -p1 < /home/vagrant/ngx_http_proxy_connect_module/patch/proxy_connect.patch
-      sudo ./configure --add-module=/home/vagrant/ngx_http_proxy_connect_module
-      sudo make CFLAGS="-Wimplicit-fallthrough"
-      sudo make install
-
-      # configure nginx
-      sudo mkdir -p /usr/local/nginx/conf
-      sudo mv /home/vagrant/nginx.conf /usr/local/nginx/conf/nginx.conf
-      sudo mkdir -p /var/log/nginx
-
-      # run nginx
-      sudo /usr/local/nginx/sbin/nginx -t
-      sudo /usr/local/nginx/sbin/nginx
-      SHELL
+    node.vm.provision :file, source: "envoy.yaml", destination: "/home/vagrant/envoy.yaml"
+    node.vm.provision :shell, inline: <<-SHELL
+      mkdir /home/vagrant/envoy
+      mv /home/vagrant/envoy.yaml /home/vagrant/envoy
+      touch /home/vagrant/envoy/access.log
+      chmod 0666 /home/vagrant/envoy/access.log
+    SHELL
+    node.vm.provision "install_docker", type: "shell", path: "../common/ubuntu-bionic64/install-docker.sh"
+    node.vm.provision "run_envoy",      type: "shell", path: "run-envoy.sh"
   end
 
   config.vm.provider :virtualbox do |vb|
@@ -53,13 +39,13 @@ Vagrant.configure("2") do |config|
     node.vm.network :private_network, ip: K0S_SYSTEMD_IP
     
     node.vm.provision :file, source: "./k0s", destination: "/home/vagrant/k0s"
-    node.vm.provision :file, source: "./k0scontroller.conf", destination: "/home/vagrant/k0scontroller.conf"
-    
-    node.vm.provision :shell, inline: <<-SHELL
-      # configure env variables
-      sudo mkdir -p /etc/systemd/system/k0scontroller.service.d
-      sudo mv /home/vagrant/k0scontroller.conf /etc/systemd/system/k0scontroller.service.d/k0scontroller.conf
-      
+    node.vm.provision :shell, env: { "PROXY_IP" => PROXY_IP }, inline: <<-SHELL
+      # configure http proxy
+      mkdir -p /etc/systemd/system/k0scontroller.service.d
+      tee -a /etc/systemd/system/k0scontroller.service.d/k0scontroller.conf <<EOF
+[Service]
+Environment=CONTAINERD_HTTPS_PROXY=$PROXY_IP:3128
+EOF
       # install k0s
       sudo mv /home/vagrant/k0s /usr/local/bin/k0s
       sudo k0s install controller --single
@@ -70,17 +56,18 @@ Vagrant.configure("2") do |config|
   config.vm.define "k0s-openrc" do |node|
     node.vm.box = "generic/alpine313"
     node.vm.hostname = "k0s-openrc"
-    node.vm.network :private_network, ip: K0S_OPENRC
+    node.vm.network :private_network, ip: K0S_OPENRC_IP
 
     node.vm.provision "configure-cgroups", type: "shell", path: "../common/openrc/configure-cgroups.sh"
     node.vm.provision :file, source: "./k0s", destination: "/home/vagrant/k0s"
-    node.vm.provision :shell, inline: <<-SHELL
+    node.vm.provision :shell, env: { "PROXY_IP" => PROXY_IP }, inline: <<-SHELL
+      # configure http proxy
+      tee -a /etc/conf.d/k0scontroller <<EOF
+export CONTAINERD_HTTPS_PROXY="$PROXY_IP:3128"
+EOF
       # install k0s
       mv /home/vagrant/k0s /usr/local/bin/k0s
       k0s install controller --single
-
-      # configure http proxy
-      echo 'export HTTP_PROXY="192.168.33.10:3128"' > /etc/conf.d/k0scontroller
     SHELL
     node.vm.provision :shell, reboot: true
   end
