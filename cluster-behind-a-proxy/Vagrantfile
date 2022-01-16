@@ -17,15 +17,18 @@ Vagrant.configure("2") do |config|
     node.vm.hostname = "proxy"
     node.vm.network :private_network, ip: PROXY_IP
 
+    node.vm.provision :file, source: "envoy", destination: "/home/vagrant/envoy"
     node.vm.provision :file, source: "envoy.yaml", destination: "/home/vagrant/envoy.yaml"
+    node.vm.provision :file, source: "envoy.service", destination: "/home/vagrant/envoy.service"
     node.vm.provision :shell, inline: <<-SHELL
-      mkdir /home/vagrant/envoy
-      mv /home/vagrant/envoy.yaml /home/vagrant/envoy
-      touch /home/vagrant/envoy/access.log
-      chmod 0666 /home/vagrant/envoy/access.log
+      mv /home/vagrant/envoy /usr/local/bin
+      mkdir /etc/envoy
+      mv /home/vagrant/envoy.yaml /etc/envoy
+      mkdir /var/log/envoy
+      mv /home/vagrant/envoy.service /etc/systemd/system
+      systemctl enable envoy.service
     SHELL
-    node.vm.provision "install_docker", type: "shell", path: "../common/ubuntu-bionic64/install-docker.sh"
-    node.vm.provision "run_envoy",      type: "shell", path: "run-envoy.sh"
+    node.vm.provision :shell, reboot: true
   end
 
   config.vm.provider :virtualbox do |vb|

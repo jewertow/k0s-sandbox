@@ -1,6 +1,7 @@
 **/*/.vagrant
-**/*/k0s
 **/*/*.log
+**/*/envoy
+**/*/k0s
 
 # TLS related files
 external-etcd-cluster/tls/certs

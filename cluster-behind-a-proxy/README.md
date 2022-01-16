@@ -28,8 +28,9 @@ wget -O k0s https://github.com/k0sproject/k0s/releases/download/v1.23.1+k0s.1/k0
 chmod u+x k0s
 ```
 
-Run k0s controllers and envoy forward proxy:
+Run envoy forward proxy and k0s controllers:
 ```bash
+./get-envoy.sh
 vagrant up
 ```
 
